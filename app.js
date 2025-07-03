@@ -194,6 +194,23 @@ async function processTrillionWebhook(webhookData) {
 // Routes
 
 /**
+ * Home page endpoint
+ */
+app.get('/', (req, res) => {
+    res.json({
+        message: 'Welcome to YourGPT Webhook Service',
+        version: '1.0.0',
+        endpoints: {
+            webhook: '/webhook/trillion',
+            test: '/test/webhook',
+            health: '/health',
+            sessions: '/sessions'
+        },
+        timestamp: new Date().toISOString()
+    });
+});
+
+/**
  * Health check endpoint
  */
 app.get('/health', (req, res) => {
