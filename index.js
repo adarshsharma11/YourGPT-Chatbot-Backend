@@ -259,31 +259,50 @@ app.post('/sessions/clear', (req, res) => {
  */
 app.post('/webhook/trillion', async (req, res) => {
     try {
+        // Accept x-www-form-urlencoded body
+        const { from, to, language, timestamp, message } = req.body;
+
+        // Optionally, verify webhook signature if secret is configured
         const signature = req.headers['x-trillion-signature'];
         const payload = JSON.stringify(req.body);
-        
-        // Verify webhook signature if secret is configured
         if (TRILLION_WEBHOOK_SECRET && !verifyTrillionWebhook(payload, signature)) {
             console.error('Invalid webhook signature');
             return res.status(401).json({ error: 'Invalid signature' });
         }
 
+        // Map incoming fields to internal structure
+        const webhookData = {
+            user_id: from || 'unknown_user',
+            channel_id: to || 'tricia@susmaninsurance.com',
+            message: message,
+            timestamp: timestamp,
+            event_type: 'message',
+            user_name: from || 'Unknown User',
+            language: language || 'en'
+        };
+
         // Process the webhook
-        const result = await processTrillionWebhook(req.body);
-        
+        const result = await processTrillionWebhook(webhookData);
+
+        // Respond with text/plain and content-length
+        let responseText;
         if (result.success) {
-            res.json(result);
+            responseText = result.gptResponse || 'No response';
+            res.set('Content-Type', 'text/plain');
+            res.set('Content-Length', Buffer.byteLength(responseText, 'utf8'));
+            res.status(200).send(responseText);
         } else {
-            res.status(500).json(result);
+            responseText = result.error || 'Internal server error';
+            res.set('Content-Type', 'text/plain');
+            res.set('Content-Length', Buffer.byteLength(responseText, 'utf8'));
+            res.status(500).send(responseText);
         }
-        
     } catch (error) {
         console.error('Error handling Trillion webhook:', error.message);
-        res.status(500).json({
-            success: false,
-            error: 'Internal server error',
-            timestamp: new Date().toISOString()
-        });
+        const responseText = 'Internal server error';
+        res.set('Content-Type', 'text/plain');
+        res.set('Content-Length', Buffer.byteLength(responseText, 'utf8'));
+        res.status(500).send(responseText);
     }
 });
 
